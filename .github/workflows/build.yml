@@ -9,10 +9,20 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: FIX Termux AAPT2
+        run: |
+          rm -f local.properties app/local.properties ~/.gradle/gradle.properties
+          grep -v "aapt2" gradle.properties | grep -v "termux" | grep -v "/data/data" > tmp || true
+          mv tmp gradle.properties
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
       - name: Build APK
-        run: gradle assembleDebug
+        run: gradle assembleDebug --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
