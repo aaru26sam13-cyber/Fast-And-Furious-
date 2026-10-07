@@ -18,13 +18,11 @@ jobs:
           sed -i '/aapt2/d' gradle.properties || true
           sed -i '/termux/d' gradle.properties || true
           sed -i '/\/data\/data/d' gradle.properties || true
-          cat local.properties
-          cat gradle.properties
 
-      - name: Setup Gradle
+      - name: Setup Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: 8.5
+          gradle-version: 9.3.1
 
       - name: Build APK
         run: gradle assembleDebug
