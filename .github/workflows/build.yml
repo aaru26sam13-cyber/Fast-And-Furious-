@@ -9,8 +9,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-      - run: chmod +x gradlew
-      - run:./gradlew assembleDebug
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+      - name: Build APK
+        run:./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: Fast-And-Furious-APK
