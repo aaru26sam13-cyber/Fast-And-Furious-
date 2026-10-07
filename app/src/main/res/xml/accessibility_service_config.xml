@@ -4,6 +4,6 @@
  android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews|flagReportViewIds"
  android:accessibilityFeedbackType="feedbackGeneric"
  android:canRetrieveWindowContent="true"
- android:description="@string/app_name"
+ android:description="Fast And Furious Auto Accept"
  android:notificationTimeout="0"
  android:packageNames="com.olacabs.customer,com.olacabs.oladriver,com.uber.driver,com.uber.uber,com.rapido.passenger,com.rapido.rider,com.fastandfurious.app" />
