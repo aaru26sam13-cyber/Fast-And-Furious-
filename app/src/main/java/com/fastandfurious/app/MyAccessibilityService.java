@@ -2,10 +2,12 @@ package com.fastandfurious.app;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
+import android.content.Context;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.os.Handler;
 import android.util.DisplayMetrics;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.List;
@@ -46,7 +48,7 @@ public class MyAccessibilityService extends AccessibilityService {
             return;
         }
 
-        // 2. UBER PAGE - RAPIDO BG = 1 BOX, UBER = 2 BOX
+        // 2. UBER - RAPIDO BG = 1 BOX, UBER = 2 BOX
         if(pkg.contains("uber") || pkg.contains("ubercab")){
             if(isTapping) return;
             if(containsText(root,"Accept")) startRapidoBackground_1Box();
@@ -61,32 +63,39 @@ public class MyAccessibilityService extends AccessibilityService {
         return false;
     }
 
-    // RAPIDO BACKGROUND - 1 BOX - tuza ₹133/₹488 photo - Pivla Accept
-    private void startRapidoBackground_1Box(){
+    private DisplayMetrics getMetrics(){
         DisplayMetrics dm=new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(dm);
+        WindowManager wm=(WindowManager)getSystemService(Context.WINDOW_SERVICE);
+        if(wm!=null) wm.getDefaultDisplay().getMetrics(dm);
+        return dm;
+    }
+
+    // RAPIDO BACKGROUND - 1 BOX
+    private void startRapidoBackground_1Box(){
+        DisplayMetrics dm=getMetrics();
         int W=dm.widthPixels, H=dm.heightPixels;
-        Rect box = new Rect((int)(W*0.12), (int)(H*0.80), (int)(W*0.93), (int)(H*0.97)); // 1 Box
+        if(W==0){ W=1080; H=1920; }
+        Rect box = new Rect((int)(W*0.12), (int)(H*0.80), (int)(W*0.93), (int)(H*0.97));
         isTapping=true; lastClick=System.currentTimeMillis();
         for(int i=0;i<60;i++){
             int x=box.left+random.nextInt(Math.max(1,box.width()));
             int y=box.top+random.nextInt(Math.max(1,box.height()));
-            handler.postDelayed(() -> tapAt(x,y), i*5); // 0.00001ms - 5ms speed - 60 point
+            handler.postDelayed(() -> tapAt(x,y), i*5);
         }
         handler.postDelayed(() -> isTapping=false, 2500);
     }
 
-    // UBER - 2 BOX - Center + Right
+    // UBER - 2 BOX
     private void startUber_2Box(AccessibilityNodeInfo root){
-        DisplayMetrics dm=new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(dm);
+        DisplayMetrics dm=getMetrics();
         int W=dm.widthPixels, H=dm.heightPixels;
+        if(W==0){ W=1080; H=1920; }
         Rect exact=findExact(root,"Match");
         Rect b1,b2;
         if(exact!=null){ b1=exact; b2=exact; }
         else{
-            b1=new Rect((int)(W*0.10),(int)(H*0.84),(int)(W*0.90),(int)(H*0.96)); // Center
-            b2=new Rect((int)(W*0.30),(int)(H*0.77),(int)(W*0.92),(int)(H*0.94)); // Right
+            b1=new Rect((int)(W*0.10),(int)(H*0.84),(int)(W*0.90),(int)(H*0.96));
+            b2=new Rect((int)(W*0.30),(int)(H*0.77),(int)(W*0.92),(int)(H*0.94));
         }
         isTapping=true; lastClick=System.currentTimeMillis();
         for(int i=0;i<30;i++){
