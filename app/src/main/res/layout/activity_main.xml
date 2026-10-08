@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FAST AND FURIOUS" android:textSize="24sp" android:textStyle="bold"/>
+    <EditText android:id="@+id/minFare" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Min Fare"/>
+    <EditText android:id="@+id/maxFare" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Max Fare"/>
+    <EditText android:id="@+id/gotoInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="GoTo Location"/>
+    <Button android:id="@+id/addGoto" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Add GoTo (15)"/>
+    <EditText android:id="@+id/avoidInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Avoid Location"/>
+    <Button android:id="@+id/addAvoid" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Add Avoid (5)"/>
+    <Button android:id="@+id/saveBtn" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SAVE"/>
+</LinearLayout>
+</ScrollView>
