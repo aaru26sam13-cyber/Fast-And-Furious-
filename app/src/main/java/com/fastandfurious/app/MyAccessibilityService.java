@@ -13,7 +13,7 @@ public class MyAccessibilityService extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null) return;
         SharedPreferences prefs = getSharedPreferences("fast_furious", MODE_PRIVATE);
-        if (!prefs.getBoolean("auto_service", false)) return;
+        if (!prefs.getBoolean("auto_service", true)) return;
 
         // Check which apps are enabled
         boolean ola = prefs.getBoolean("app_ola", true);
