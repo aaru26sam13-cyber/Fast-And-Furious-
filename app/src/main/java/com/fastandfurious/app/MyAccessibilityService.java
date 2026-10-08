@@ -5,59 +5,56 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 public class MyAccessibilityService extends AccessibilityService {
-    
-    boolean isLocked = false;
+
+    private long lastClick = 0;
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (isLocked) return;
+        if (event == null) return;
+        if (System.currentTimeMillis() - lastClick < 500) return;
+
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
-        checkAndClick(root);
+        findAndClick(root);
     }
 
-    private void checkAndClick(AccessibilityNodeInfo node) {
-        if (node == null || isLocked) return;
-        
-        String text = "";
-        String desc = "";
-        String id = "";
+    private void findAndClick(AccessibilityNodeInfo node) {
+        if (node == null) return;
         try {
-            if(node.getText() != null) text = node.getText().toString().toLowerCase();
-            if(node.getContentDescription() != null) desc = node.getContentDescription().toString().toLowerCase();
-            if(node.getViewIdResourceName() != null) id = node.getViewIdResourceName().toLowerCase();
+            String text = node.getText() != null ? node.getText().toString().toLowerCase() : "";
+            String desc = node.getContentDescription() != null ? node.getContentDescription().toString().toLowerCase() : "";
+
+            // ===== RAPIDO SATHI - JUNA CODE TASACH - KAHI BADAL NAHI =====
+            boolean isRapidoAccept = text.contains("accept") || desc.contains("accept");
+            
+            // ===== OLA + UBER SATHI - NAVIN ADD - RAPIDO LA DHIKKA NAHI =====
+            boolean isUberMatch = text.contains("match") || desc.contains("match");
+
+            boolean isTarget = isRapidoAccept || isUberMatch;
+
+            if (isTarget) {
+                AccessibilityNodeInfo parent = node;
+                for (int i = 0; i < 8; i++) {
+                    if (parent == null) break;
+                    if (parent.isClickable()) {
+                        parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                        lastClick = System.currentTimeMillis();
+                        return;
+                    }
+                    parent = parent.getParent();
+                }
+                node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                lastClick = System.currentTimeMillis();
+                return;
+            }
         } catch (Exception e) {}
 
-        // Rapido + Ola + 【entity-Uber¦canonical_name=Uber】 saglyansathi
-        boolean isAcceptBtn = text.contains("accept") || desc.contains("accept") || 
-                              text.contains("match") || desc.contains("match") ||
-                              id.contains("accept") ||
-                              id.contains("match");
-
-        if (isAcceptBtn) {
-            AccessibilityNodeInfo p = node;
-            for (int i = 0; i < 6; i++) {
-                if (p == null) break;
-                if (p.isClickable()) {
-                    isLocked = true;
-                    p.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    // 1.5 sec nantar parat chalu
-                    new android.os.Handler(getMainLooper()).postDelayed(() -> isLocked = false, 1500);
-                    return;
-                }
-                p = p.getParent();
-            }
-        }
-        
         for (int i = 0; i < node.getChildCount(); i++) {
-            checkAndClick(node.getChild(i));
-            if (isLocked) return;
+            findAndClick(node.getChild(i));
+            if (System.currentTimeMillis() - lastClick < 500) return;
         }
     }
 
     @Override
     public void onInterrupt() {}
-    
-    @Override
-    public void onServiceConnected() {}
 }
