@@ -27,11 +27,33 @@ public class MyAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if(root==null) return;
 
-        // 1. RAPIDO PAGE OPEN - PAHILA WALA - 0.00001ms - NO CHANGE
+        // ===== 1. RAPIDO PAGE OPEN - PAHILA WALA - 0.00001ms =====
         if(pkg.contains("rapido")){
-            if(System.currentTimeMillis()-lastClick < 200) return;
+            if(fastClickAccept(root)) return;
+            return;
+        }
+
+        // ===== 2. UBER PAGE - RAPIDO BACKGROUND + UBER =====
+        if(pkg.contains("uber") || pkg.contains("ubercab")){
+            if(System.currentTimeMillis()-lastClick < 150) return;
+            // Rapido background - pahila direct Accept click - 0.00001ms
+            if(fastClickAccept(root)){
+                startRapidoBackground_1Box_Fast();
+                return;
+            }
+            // Uber - Match
+            if(containsTextQuick(root,"Match") || containsTextQuick(root,"₹")){
+                startUber_2Box(root);
+            }
+        }
+    }
+
+    // PAHILA WALA ORIGINAL - 0.00001ms - Rapido Open + Background donhi sathi
+    private boolean fastClickAccept(AccessibilityNodeInfo root){
+        if(System.currentTimeMillis()-lastClick < 100) return false;
+        try{
             List<AccessibilityNodeInfo> list=root.findAccessibilityNodeInfosByText("Accept");
-            if(list!=null){
+            if(list!=null && !list.isEmpty()){
                 for(AccessibilityNodeInfo n:list){
                     AccessibilityNodeInfo p=n;
                     for(int i=0;i<8;i++){ 
@@ -39,57 +61,54 @@ public class MyAccessibilityService extends AccessibilityService {
                         if(p.isClickable()){ 
                             p.performAction(AccessibilityNodeInfo.ACTION_CLICK); 
                             lastClick=System.currentTimeMillis(); 
-                            return; 
+                            return true; 
                         } 
                         p=p.getParent(); 
                     }
                 }
             }
-            return;
-        }
-
-        // 2. UBER - RAPIDO BG = 1 BOX, UBER = 2 BOX
-        if(pkg.contains("uber") || pkg.contains("ubercab")){
-            if(isTapping) return;
-            if(containsText(root,"Accept")) startRapidoBackground_1Box();
-            if(containsText(root,"Match") || containsText(root,"₹")) startUber_2Box(root);
-        }
+        }catch(Exception e){}
+        return false;
     }
 
-    private boolean containsText(AccessibilityNodeInfo n, String s){
+    private boolean containsTextQuick(AccessibilityNodeInfo n, String s){
         if(n==null) return false;
-        try{ String t=n.getText()!=null?n.getText().toString():""; if(t.toLowerCase().contains(s.toLowerCase())) return true; }catch(Exception e){}
-        for(int i=0;i<n.getChildCount();i++){ if(containsText(n.getChild(i),s)) return true; }
+        try{
+            List<AccessibilityNodeInfo> list=n.findAccessibilityNodeInfosByText(s);
+            if(list!=null && !list.isEmpty()) return true;
+        }catch(Exception e){}
         return false;
     }
 
     private DisplayMetrics getMetrics(){
         DisplayMetrics dm=new DisplayMetrics();
-        WindowManager wm=(WindowManager)getSystemService(Context.WINDOW_SERVICE);
-        if(wm!=null) wm.getDefaultDisplay().getMetrics(dm);
+        try{
+            WindowManager wm=(WindowManager)getSystemService(Context.WINDOW_SERVICE);
+            if(wm!=null) wm.getDefaultDisplay().getMetrics(dm);
+        }catch(Exception e){ dm.widthPixels=1080; dm.heightPixels=1920; }
+        if(dm.widthPixels==0){ dm.widthPixels=1080; dm.heightPixels=1920; }
         return dm;
     }
 
-    // RAPIDO BACKGROUND - 1 BOX
-    private void startRapidoBackground_1Box(){
+    // RAPIDO BACKGROUND - 1 BOX - Direct click nantar backup
+    private void startRapidoBackground_1Box_Fast(){
+        if(isTapping) return;
         DisplayMetrics dm=getMetrics();
         int W=dm.widthPixels, H=dm.heightPixels;
-        if(W==0){ W=1080; H=1920; }
         Rect box = new Rect((int)(W*0.12), (int)(H*0.80), (int)(W*0.93), (int)(H*0.97));
-        isTapping=true; lastClick=System.currentTimeMillis();
+        isTapping=true;
         for(int i=0;i<60;i++){
             int x=box.left+random.nextInt(Math.max(1,box.width()));
             int y=box.top+random.nextInt(Math.max(1,box.height()));
-            handler.postDelayed(() -> tapAt(x,y), i*5);
+            handler.postDelayed(() -> tapAt(x,y), i*3); // 3ms - ajun fast
         }
-        handler.postDelayed(() -> isTapping=false, 2500);
+        handler.postDelayed(() -> isTapping=false, 1500);
     }
 
-    // UBER - 2 BOX
     private void startUber_2Box(AccessibilityNodeInfo root){
+        if(isTapping) return;
         DisplayMetrics dm=getMetrics();
         int W=dm.widthPixels, H=dm.heightPixels;
-        if(W==0){ W=1080; H=1920; }
         Rect exact=findExact(root,"Match");
         Rect b1,b2;
         if(exact!=null){ b1=exact; b2=exact; }
@@ -108,7 +127,7 @@ public class MyAccessibilityService extends AccessibilityService {
             int y2=b2.top+random.nextInt(Math.max(1,b2.height()));
             handler.postDelayed(() -> tapAt(x2,y2), i*5+2);
         }
-        handler.postDelayed(() -> isTapping=false, 3000);
+        handler.postDelayed(() -> isTapping=false, 2500);
     }
 
     private Rect findExact(AccessibilityNodeInfo root,String txt){
