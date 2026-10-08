@@ -4,90 +4,55 @@ import android.accessibilityservice.AccessibilityService;
 import android.content.SharedPreferences;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import java.util.List;
-import java.util.Set;
 
 public class MyAccessibilityService extends AccessibilityService {
+    SharedPreferences prefs;
+    boolean alreadyClicked = false;
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null) return;
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED 
+            && event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
+
+        prefs = getSharedPreferences("fast_furious", MODE_PRIVATE);
+        if (!prefs.getBoolean("auto_service", false)) return;
+        if (alreadyClicked) return;
+
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
-        SharedPreferences prefs = getSharedPreferences("fast_furious", MODE_PRIVATE);
-        if (!prefs.getBoolean("auto_service", true)) return;
-        String allText = getAllText(root).toLowerCase();
+        clickOnlyAcceptButton(root);
+    }
 
-        Set<String> avoidSet = prefs.getStringSet("avoid_locations", null);
-        if (avoidSet!= null) {
-            for (String avoid : avoidSet) {
-                if (!avoid.isEmpty() && allText.contains(avoid.toLowerCase())) return;
-            }
-        }
-        Set<String> goSet = prefs.getStringSet("goto_locations", null);
-        if (goSet!= null &&!goSet.isEmpty()) {
-            boolean found = false;
-            for (String go : goSet) {
-                if (!go.isEmpty() && allText.contains(go.toLowerCase())) { found = true; break; }
-            }
-            if (!found) return;
-        }
-        int minFare = prefs.getInt("min_fare", 0);
-        int maxFare = prefs.getInt("max_fare", 10000);
-        int fare = extractFare(root);
-        if (fare!= -1 && (fare < minFare || fare > maxFare)) return;
+    private void clickOnlyAcceptButton(AccessibilityNodeInfo node) {
+        if (node == null || alreadyClicked) return;
+        boolean isButton = node.getClassName() != null && node.getClassName().toString().toLowerCase().contains("button");
+        boolean isClickable = node.isClickable();
 
-        ultraFastClick(root);
-        instantClick(root);
-    }
-    private String getAllText(AccessibilityNodeInfo node){
-        if(node==null) return "";
-        StringBuilder sb = new StringBuilder();
-        if(node.getText()!=null) sb.append(node.getText().toString()).append(" ");
-        if(node.getContentDescription()!=null) sb.append(node.getContentDescription().toString()).append(" ");
-        for(int i=0;i<node.getChildCount();i++){
-            AccessibilityNodeInfo c=node.getChild(i);
-            if(c!=null){ sb.append(getAllText(c)).append(" "); c.recycle(); }
-        }
-        return sb.toString();
-    }
-    private int extractFare(AccessibilityNodeInfo node){
-        try{
-            String t=getAllText(node);
-            if(t.contains("₹")){
-                String[] parts=t.split("₹");
-                for(int i=1;i<parts.length;i++){
-                    String num=parts[i].replaceAll("[^0-9]", " ").trim().split(" ")[0];
-                    if(!num.isEmpty()) return Integer.parseInt(num);
-                }
+        if (isButton && isClickable) {
+            String text = node.getText() != null ? node.getText().toString().trim().toLowerCase() : "";
+            // 【entity-Uber¦canonical_name=Uber】 = Match, Ola = Accept, Rapido = Accept - 0.01ms speed
+            if (text.contains("accept") || text.equals("match")) {
+                try {
+                    // 0.01ms = NO DELAY - Ekdam fast!
+                    node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    alreadyClicked = true;
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> alreadyClicked = false, 5000);
+                    return;
+                } catch (Exception e) {}
             }
-        }catch(Exception e){}
-        return -1;
-    }
-    private void instantClick(AccessibilityNodeInfo node) {
-        if (node == null) return;
-        String combined=getAllText(node).toLowerCase();
-        if (combined.contains("accept") || combined.contains("match") || combined.contains("go") || combined.contains("start")) {
-            if (node.isClickable()) { node.performAction(AccessibilityNodeInfo.ACTION_CLICK); return; }
-            AccessibilityNodeInfo p=node.getParent();
-            while(p!=null){ if(p.isClickable()){p.performAction(AccessibilityNodeInfo.ACTION_CLICK); return;} p=p.getParent(); }
         }
         for (int i = 0; i < node.getChildCount(); i++) {
-            AccessibilityNodeInfo child = node.getChild(i);
-            if (child!= null) { instantClick(child); child.recycle(); }
+            if (alreadyClicked) break;
+            clickOnlyAcceptButton(node.getChild(i));
         }
     }
-    private void ultraFastClick(AccessibilityNodeInfo root) {
-        if (root == null) return;
-        String[] targets = {"Match", "MATCH", "Accept", "ACCEPT", "ACCEPT RIDE", "GO", "START"};
-        for (String t : targets) {
-            List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByText(t);
-            for (AccessibilityNodeInfo n : nodes) {
-                if (n!= null) {
-                    if (n.isClickable()) n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    else if (n.getParent()!= null) n.getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                }
-            }
-        }
+
+    @Override
+    public void onInterrupt() { alreadyClicked = false; }
+
+    @Override
+    public void onServiceConnected() {
+        alreadyClicked = false;
+        super.onServiceConnected();
     }
-    @Override public void onInterrupt() {}
 }
