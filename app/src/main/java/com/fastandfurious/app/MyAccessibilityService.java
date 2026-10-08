@@ -11,6 +11,13 @@ public class MyAccessibilityService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null) return;
+        
+        // ==== YA MADHY KA - HA NAVIN FILTER - KEYPAD FIX ====
+        String pkg = event.getPackageName() != null ? event.getPackageName().toString().toLowerCase() : "";
+        if (!pkg.contains("rapido") && !pkg.contains("ola") && !pkg.contains("uber") && !pkg.contains("olacab")) {
+            return;
+        }
+        
         if (System.currentTimeMillis() - lastClick < 500) return;
 
         AccessibilityNodeInfo root = getRootInActiveWindow();
@@ -26,7 +33,7 @@ public class MyAccessibilityService extends AccessibilityService {
 
             // ===== RAPIDO SATHI - JUNA CODE TASACH - KAHI BADAL NAHI =====
             boolean isRapidoAccept = text.contains("accept") || desc.contains("accept");
-            
+
             // ===== OLA + UBER SATHI - NAVIN ADD - RAPIDO LA DHIKKA NAHI =====
             boolean isUberMatch = text.contains("match") || desc.contains("match");
 
