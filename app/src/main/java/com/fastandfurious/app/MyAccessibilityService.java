@@ -20,30 +20,42 @@ public class MyAccessibilityService extends AccessibilityService {
 
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
-        clickOnlyAcceptButton(root);
+        findAndClick(root);
     }
 
-    private void clickOnlyAcceptButton(AccessibilityNodeInfo node) {
+    private void findAndClick(AccessibilityNodeInfo node) {
         if (node == null || alreadyClicked) return;
-        boolean isButton = node.getClassName() != null && node.getClassName().toString().toLowerCase().contains("button");
-        boolean isClickable = node.isClickable();
 
-        if (isButton && isClickable) {
-            String text = node.getText() != null ? node.getText().toString().trim().toLowerCase() : "";
-            // 【entity-Uber¦canonical_name=Uber】 = Match, Ola = Accept, Rapido = Accept - 0.01ms speed
-            if (text.contains("accept") || text.equals("match")) {
+        String text = node.getText() != null ? node.getText().toString().trim().toLowerCase() : "";
+        String desc = node.getContentDescription() != null ? node.getContentDescription().toString().trim().toLowerCase() : "";
+
+        // FINAL: Ola=Accept, Rapido=Accept/Accept Ride, Uber=Match - 0.01ms speed
+        boolean isOlaRapido = text.contains("accept") || desc.contains("accept");
+        boolean isUber = text.equals("match") || desc.equals("match") || text.contains("match") || desc.contains("match");
+
+        if (isOlaRapido || isUber) {
+            // Rapido/Ola cha button TextView asto - tyacha clickable parent var click karaycha
+            AccessibilityNodeInfo clickNode = node;
+            int tries = 0;
+            while (clickNode != null && !clickNode.isClickable() && tries < 5) {
+                clickNode = clickNode.getParent();
+                tries++;
+            }
+            if (clickNode != null) {
                 try {
-                    // 0.01ms = NO DELAY - Ekdam fast!
-                    node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    // 0.01ms = NO DELAY - SUPER FAST CLICK
+                    clickNode.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     alreadyClicked = true;
-                    new android.os.Handler(getMainLooper()).postDelayed(() -> alreadyClicked = false, 5000);
+                    // 4 sec lock - Map open nahi honar
+                    new android.os.Handler(getMainLooper()).postDelayed(() -> alreadyClicked = false, 4000);
                     return;
                 } catch (Exception e) {}
             }
         }
+
         for (int i = 0; i < node.getChildCount(); i++) {
             if (alreadyClicked) break;
-            clickOnlyAcceptButton(node.getChild(i));
+            findAndClick(node.getChild(i));
         }
     }
 
