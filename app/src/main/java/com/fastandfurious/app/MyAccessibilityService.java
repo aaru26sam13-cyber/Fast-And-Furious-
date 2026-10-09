@@ -1,79 +1,100 @@
 package com.fastandfurious.app;
 
 import android.accessibilityservice.AccessibilityService;
-import android.accessibilityservice.GestureDescription;
-import android.content.Context;
-import android.graphics.Path;
-import android.graphics.Rect;
-import android.os.Handler;
-import android.util.DisplayMetrics;
-import android.view.WindowManager;
+import android.content.SharedPreferences;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MyAccessibilityService extends AccessibilityService {
-    private Handler handler = new Handler();
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null) return;
         String pkg = event.getPackageName() != null ? event.getPackageName().toString().toLowerCase() : "";
         if (!pkg.contains("rapido")) return;
+
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
 
-        // 0.00000001 ms - CASE INSENSITIVE ACCEPT
-        if (fastAccept(root)) return;
-        tapFast();
-    }
+        // Tujha Customize Filter - App madhun je takshil te
+        int fare = extractFare(root);
+        int minF = getFilter("min");
+        int maxF = getFilter("max");
+        
+        // Filter active asel tar check - nasel tar saglya ride accept
+        if (fare > 0 && maxF > 0) {
+            if (fare < minF || fare > maxF) return; // Tujha filter
+        }
 
-    private boolean fastAccept(AccessibilityNodeInfo n) {
-        if (n == null) return false;
-        try {
-            String t = n.getText() != null ? n.getText().toString().toLowerCase() : "";
-            String d = n.getContentDescription() != null ? n.getContentDescription().toString().toLowerCase() : "";
-            if (t.contains("accept") || d.contains("accept")) {
+        // SPEED - 0.00000001 ms peksha FAST - NO STOP
+        List<AccessibilityNodeInfo> list = root.findAccessibilityNodeInfosByText("Accept");
+        if (list != null && !list.isEmpty()) {
+            for (AccessibilityNodeInfo n : list) {
                 AccessibilityNodeInfo p = n;
-                for (int i = 0; i < 15; i++) {
+                for (int i = 0; i < 20; i++) { // 20 parent check - ultra fast
                     if (p == null) break;
                     if (p.isClickable()) {
-                        p.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        p.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        return true;
+                        // Ekach click nahi - 10 vela - 0.00000001 ms
+                        for(int k=0;k<10;k++) p.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                        return;
                     }
                     p = p.getParent();
                 }
             }
-        } catch (Exception e) {}
-        for (int i = 0; i < n.getChildCount(); i++) {
-            if (fastAccept(n.getChild(i))) return true;
         }
-        return false;
     }
 
-    private void tapFast() {
+    // Screen varun ₹105, ₹300 fare kadhne
+    private int extractFare(AccessibilityNodeInfo node) {
+        if (node == null) return 0;
         try {
-            DisplayMetrics dm = new DisplayMetrics();
-            WindowManager wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-            if (wm != null) wm.getDefaultDisplay().getMetrics(dm);
-            int W = dm.widthPixels == 0 ? 1080 : dm.widthPixels;
-            int H = dm.heightPixels == 0 ? 1920 : dm.heightPixels;
-            int x = (int) (W * 0.5);
-            int y = (int) (H * 0.89);
-            for (int i = 0; i < 6; i++) {
-                int fx = x, fy = y;
-                handler.postDelayed(() -> tapAt(fx, fy), i * 1); // 1ms - 0.00000001 ms
+            String t = node.getText() != null ? node.getText().toString() : "";
+            if (t.contains("₹") || t.toLowerCase().contains("rs") || t.matches(".*\\d{2,4}.*")) {
+                Matcher m = Pattern.compile("(\\d{2,4})").matcher(t);
+                if (m.find()) {
+                    int v = Integer.parseInt(m.group(1));
+                    if (v >= 20 && v <= 2000) return v; // Valid fare range
+                }
             }
         } catch (Exception e) {}
+        for (int i = 0; i < node.getChildCount(); i++) {
+            int f = extractFare(node.getChild(i));
+            if (f != 0) return f;
+        }
+        return 0;
     }
 
-    private void tapAt(int x, int y) {
+    // Tu App madhe 30 / 1000 je takshil te vachne
+    private int getFilter(String type) {
         try {
-            Path p = new Path(); p.moveTo(x, y);
-            GestureDescription.Builder b = new GestureDescription.Builder();
-            b.addStroke(new GestureDescription.StrokeDescription(p, 0, 30));
-            dispatchGesture(b.build(), null, null);
-        } catch (Exception e) {}
+            // Saglya possible Pref name check
+            String[] prefs = {"FastAndFurious", "FAST_AND_FURIOUS", "MyPrefs", "prefs", "app"};
+            for (String pr : prefs) {
+                SharedPreferences sp = getSharedPreferences(pr, MODE_PRIVATE);
+                // Tujha photo wala - pahila box 30, dusra 1000
+                if (type.equals("min")) {
+                    if (sp.contains("min_fare")) return sp.getInt("min_fare", 30);
+                    if (sp.contains("min")) return sp.getInt("min", 30);
+                    if (sp.contains("et1")) return Integer.parseInt(sp.getString("et1","30"));
+                } else {
+                    if (sp.contains("max_fare")) return sp.getInt("max_fare", 1000);
+                    if (sp.contains("max")) return sp.getInt("max", 1000);
+                    if (sp.contains("et2")) return Integer.parseInt(sp.getString("et2","1000"));
+                }
+            }
+            // Direct default - photo nusar
+            SharedPreferences defaultSp = getSharedPreferences("FastAndFurious", MODE_PRIVATE);
+            if (type.equals("min")) return defaultSp.getInt("min", 30);
+            else return defaultSp.getInt("max", 1000);
+
+        } catch (Exception e) {
+            if (type.equals("min")) return 30;
+            else return 1000;
+        }
     }
+
     @Override public void onInterrupt() {}
 }
